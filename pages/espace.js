@@ -59,18 +59,27 @@ export default function Espace() {
   // Scanner
   async function scanner() {
     if (!scanQ.trim()) return
-    const q = scanQ.trim().toLowerCase()
+    const q = scanQ.trim()
     setScanQ('')
 
-    const { data } = await supabase.from('participants').select('*')
-    if (!data) return
-    const p = data.find(x =>
-      x.ref.toLowerCase() === q ||
-      (x.prenom + ' ' + x.nom).toLowerCase().includes(q) ||
-      x.nom.toLowerCase().includes(q)
-    )
-    if (!p) { setScanResult({ type: 'err', title: 'Participant introuvable', body: `Aucun inscrit ne correspond à "${scanQ || q}".\nVérifiez le code ou inscrivez-le sur place.` }); return }
-    if (p.statut === 'présent') { setScanResult({ type: 'warn', title: 'Déjà enregistré', body: `${p.prenom} ${p.nom.toUpperCase()} (${p.ref})\nest déjà marqué(e) présent(e).` }); return }
+    // Recherche par ref exacte, nom ou prenom (insensible à la casse)
+    const { data: byRef } = await supabase.from('participants').select('*').ilike('ref', q)
+    const { data: byNom } = await supabase.from('participants').select('*').ilike('nom', `%${q}%`)
+    const { data: byPrenom } = await supabase.from('participants').select('*').ilike('prenom', `%${q}%`)
+
+    const all = [...(byRef || []), ...(byNom || []), ...(byPrenom || [])]
+    const seen = new Set()
+    const unique = all.filter(x => { if (seen.has(x.id)) return false; seen.add(x.id); return true })
+    const p = unique[0]
+
+    if (!p) {
+      setScanResult({ type: 'err', title: 'Participant introuvable', body: `Aucun inscrit ne correspond à "${q}".\nVérifiez le code ou inscrivez-le sur place.` })
+      return
+    }
+    if (p.statut === 'present' || p.statut === 'présent') {
+      setScanResult({ type: 'warn', title: 'Déjà enregistré', body: `${p.prenom} ${p.nom.toUpperCase()} (${p.ref})\nest déjà marqué(e) présent(e).` })
+      return
+    }
     await supabase.from('participants').update({ statut: 'présent' }).eq('id', p.id)
     setScanResult({ type: 'ok', title: 'Accès autorisé ✅', body: `Bienvenue, ${p.prenom} ${p.nom.toUpperCase()} !\nProfil : ${p.profil}${p.niveau ? ' · ' + p.niveau : ''}\nRéf. : ${p.ref}` })
     loadStats()
