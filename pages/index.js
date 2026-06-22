@@ -157,7 +157,7 @@ export default function Inscription() {
       // Infos événement
       ctx.fillStyle = '#4A5568'
       ctx.font = '13px sans-serif'
-      ctx.fillText('📅 Samedi 27 juin 2026  ·  ⏰ 08h00 – 16h30  ·  📍 Bingerville', 300, qrY + qrSize + 82)
+      ctx.fillText('📅 Samedi 27 juin 2026  ·  ⏰ 08h00 – 16h30  ·  📍 EMPT - Bingerville', 300, qrY + qrSize + 82)
 
       // Ligne décorative bas
       ctx.fillStyle = '#E2E8F0'
